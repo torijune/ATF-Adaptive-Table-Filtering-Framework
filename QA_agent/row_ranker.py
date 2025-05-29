@@ -46,7 +46,7 @@ def row_ranker_fn(state):
     fusion_scores = 0.4 * tfidf_norm + 0.3 * bm25_norm + 0.3 * dense_norm
 
     # Top-K row 인덱스 선택 (비율 기반 + 올림 처리)
-    top_k_ratio = 0.2  # 예: 상위 20%만 선택
+    top_k_ratio = 0.4  # 예: 상위 20%만 선택
     top_k = max(1, int(np.ceil(len(row_texts) * top_k_ratio)))
     top_indices = fusion_scores.argsort()[-top_k:][::-1]
 
@@ -54,7 +54,7 @@ def row_ranker_fn(state):
     print(f"[RowRanker] 🏅 Top-{top_k} row indices (based on {top_k_ratio*100}% of {len(row_texts)} rows): {top_indices.tolist()}")
 
     # 상위 row만 선택
-    selected_rows = raw_table.iloc[top_indices].reset_index(drop=True)
+    selected_rows = raw_table[selected_columns].iloc[top_indices].reset_index(drop=True)
     print(f"[RowRanker] 📋 Selected rows:\n{selected_rows}")
 
     return {

@@ -13,8 +13,8 @@ The system is organized into four primary stages:
    - Analyzes the relevance of each column to the question using a combination of LLM scores and embedding-based similarity (e.g., cosine, cross-encoder).
    - Also includes sample value analysis and structure-aware scoring to distinguish categorical and numerical fields.
 
-2. **Clustering**  
-   - Groups semantically similar columns using clustering methods.
+2. **Column Clustering**  
+   - Groups semantically **similar columns** using **K-means** clustering methods.
    - Preserves columns from the primary cluster and supplements with the most relevant column from other clusters.
 
 3. **RowRanker (Hybrid Retrieval)**  

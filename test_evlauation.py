@@ -6,6 +6,10 @@ import re
 
 def normalize(text):
     """간단한 정규화 (공백, 소문자 등)"""
+    if text is None:
+        return ""
+    if not isinstance(text, str):
+        text = str(text)
     return re.sub(r"[\W_]+", " ", text.lower()).strip()
 
 def compute_em(pred, label):
@@ -42,6 +46,8 @@ def evaluate_open_wikitable(json_path="data/test.json", db_path="data/table.db",
         data = json.load(f)
 
     keys = list(data["question"].keys())
+    import random
+    random.shuffle(keys)
     if max_samples:
         keys = keys[:max_samples]
 
@@ -53,18 +59,23 @@ def evaluate_open_wikitable(json_path="data/test.json", db_path="data/table.db",
         gold = gold[0] if isinstance(gold, list) else gold
 
         print(f"\n🔍 Evaluating index: {idx} — Question: {data['question'][idx]}")
-        pred = make_response(idx, json_file=json_path, db_file=db_path)
+        try:
+            pred = make_response(idx, json_file=json_path, db_file=db_path)
 
-        # 리스트 응답 대응: ["Baylor"] → "Baylor"
-        if isinstance(pred, list):
-            pred = pred[0] if pred else ""
+            # 리스트 응답 대응: ["Baylor"] → "Baylor"
+            if isinstance(pred, list):
+                pred = pred[0] if pred else ""
 
-        print(f"💡 Pred: {pred} | ✅ Gold: {gold}")
+            print(f"💡 Pred: {pred} | ✅ Gold: {gold}")
 
-        em = compute_em(pred, gold)
-        f1 = compute_f1(pred, gold)
-        em_list.append(em)
-        f1_list.append(f1)
+            em = compute_em(pred, gold)
+            f1 = compute_f1(pred, gold)
+            em_list.append(em)
+            f1_list.append(f1)
+        except Exception as e:
+            print(f"❌ Error evaluating index {idx}: {e}")
+            em_list.append(0)
+            f1_list.append(0.0)
 
     print("\n📊 전체 평가 결과")
     print(f"EM (Exact Match): {sum(em_list) / len(em_list):.4f}")
@@ -75,5 +86,5 @@ if __name__ == "__main__":
     evaluate_open_wikitable(
         json_path="data/test.json",
         db_path="data/table.db",
-        max_samples=10  # 필요시 전체 평가
+        max_samples=20  # 필요시 전체 평가
     )

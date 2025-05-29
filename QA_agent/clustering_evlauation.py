@@ -6,38 +6,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import re
 from collections import Counter
 
-
-# Helper Functions
-def extract_question_features(question):
-    """질문에서 핵심 키워드와 특징 추출"""
-    # 기본적인 키워드 추출
-    keywords = re.findall(r'\b\w+\b', question.lower())
-    
-    # SQL 키워드, 집계 함수, 비교 연산자 등 식별
-    sql_keywords = ['select', 'where', 'group', 'order', 'sum', 'count', 'avg', 'max', 'min']
-    comparison_words = ['greater', 'less', 'equal', 'between', 'like', 'in']
-    
-    features = {
-        'has_aggregation': any(word in keywords for word in ['sum', 'count', 'average', 'total']),
-        'has_filtering': any(word in keywords for word in ['where', 'filter', 'condition']),
-        'has_comparison': any(word in keywords for word in comparison_words),
-        'complexity': len(keywords)
-    }
-    
-    return features
-
-def vectorize_question(question, column_names):
-    """질문을 벡터화하여 컬럼 점수와 비교 가능한 형태로 변환"""
-    # 간단한 TF-IDF 기반 벡터화
-    vectorizer = TfidfVectorizer(stop_words='english')
-    
-    # 질문과 컬럼명들을 결합하여 벡터화
-    texts = [question] + column_names
-    tfidf_matrix = vectorizer.fit_transform(texts)
-    
-    # 질문 벡터 반환 (첫 번째 행)
-    return tfidf_matrix[0].toarray().flatten()
-
 def calculate_cluster_quality(column_clusters, score_dict):
     """클러스터의 품질 점수 계산 (응집도 + 분리도)"""
     clusters = {}
@@ -301,6 +269,7 @@ def adaptive_threshold_selection_fn(state):
 def ensemble_cluster_selection_fn(state):
     """
     여러 선택 방법의 앙상블을 통한 robust한 클러스터 선택
+    - state["top_k_per_cluster"]를 통해 각 클러스터에서 선택할 상위 컬럼 수 조정 가능 (기본값 1)
     """
     # 각 방법으로 클러스터 선택
     result1 = semantic_cluster_selection_fn(state)
@@ -313,6 +282,11 @@ def ensemble_cluster_selection_fn(state):
              result3["selected_cluster"]]
     
     vote_counts = Counter(votes)
+    # Ensure all clusters are included in the vote count
+    all_cluster_ids = set(state["column_clusters"].values())
+    for cluster_id in all_cluster_ids:
+        if cluster_id not in vote_counts:
+            vote_counts[cluster_id] = 0
     
     # 최다 득표 클러스터 선택, 동점시 confidence 점수로 결정
     if len(set(votes)) == len(votes):  # 모두 다른 경우
@@ -338,11 +312,14 @@ def ensemble_cluster_selection_fn(state):
         if cid in non_selected_clusters:
             non_selected_clusters[cid].append(col)
 
+    # 선택되지 않은 클러스터에서 뽑아올 column의 수
+    top_k_per_cluster = 1
     additional_columns = []
     for cid, cols in non_selected_clusters.items():
         if cols:
-            top_col = max(cols, key=lambda c: np.mean(score_dict[c]))
-            additional_columns.append(top_col)
+            sorted_cols = sorted(cols, key=lambda c: np.mean(score_dict[c]), reverse=True)
+            top_k_cols = sorted_cols[:top_k_per_cluster]
+            additional_columns.extend(top_k_cols)
     
     print(f"[EnsembleSelection] Votes: {vote_counts}")
     print(f"[EnsembleSelection] Selected cluster: {selected_cluster}")
@@ -350,6 +327,14 @@ def ensemble_cluster_selection_fn(state):
     print(f"[EnsembleSelection] Other cluster selected columns: {additional_columns}")
 
     selected_columns += additional_columns
+
+    # Add essential columns if not already included
+    essential_columns = state.get("essential_columns", [])
+    for col in essential_columns:
+        if col not in selected_columns:
+            selected_columns.append(col)
+
+    
 
     print(f"[EnsembleSelection] Final selected columns: {selected_columns}")
 

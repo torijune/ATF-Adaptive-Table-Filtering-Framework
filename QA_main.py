@@ -20,4 +20,4 @@ def make_response(index):
 if __name__ == "__main__":
     index = str(input("질문을 원하는 질문 Index를 입력하세요. : \n"))
     result = make_response(index)
-    print(f"[LLM Responder] ✅ Answer:\n{result}")
+    # print(f"[LLM Responder] ✅ Answer:\n{result}")

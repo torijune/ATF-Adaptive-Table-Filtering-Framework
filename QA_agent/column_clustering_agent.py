@@ -14,7 +14,7 @@ def column_clustering_fn(state):
     # print(f"[Clustering] Vectors shape: {vectors.shape}")
 
     # Run k-means clustering
-    kmeans = KMeans(n_clusters=2, random_state=42, n_init="auto")
+    kmeans = KMeans(n_clusters=3, random_state=42, n_init="auto")
     labels = kmeans.fit_predict(vectors)
 
     clustered = {col: int(cluster) for col, cluster in zip(column_names, labels)}

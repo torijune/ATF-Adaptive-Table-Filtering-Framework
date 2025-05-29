@@ -94,8 +94,12 @@ LLM Scoring Robustness 업그레이드 전략
 3. 추후에 Bi-Encoder Similiarity과 함께 Clustering하긴하지만 LLM Scoring 과정에 수식적인 부분으로 Robustness를 보장해주면 좋을 것 같음
 4. 고민중
 '''
+import numpy as np
+import statistics
+from typing import Dict
+
 def ensemble_llm_score(column_descriptions: Dict[str, str], question: str, num_iterations: int = 3) -> Dict:
-    """Run LLM scoring multiple times and ensemble the results"""
+    """Run LLM scoring multiple times and ensemble the results using rank-based aggregation."""
     scoring_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)  # Set to 0 for deterministic results
     
     formatted_columns = "\n".join([f"{col}: {desc}" for col, desc in column_descriptions.items()])
@@ -126,6 +130,7 @@ def ensemble_llm_score(column_descriptions: Dict[str, str], question: str, num_i
     """
 
     all_scores = []
+    columns = list(column_descriptions.keys())
     
     for i in range(num_iterations):
         try:
@@ -151,20 +156,28 @@ def ensemble_llm_score(column_descriptions: Dict[str, str], question: str, num_i
             print(f"Warning: LLM scoring iteration {i+1} failed: {e}")
             continue
     
-    # Ensemble the scores
+    # Ensemble the scores using rank-based aggregation
     if not all_scores:
-        return {col: 0.0 for col in column_descriptions.keys()}
+        return {col: 0.0 for col in columns}
     
+    # Step 1: 각 iteration의 score를 랭크로 변환 후 정규화 (1/n ~ 1)
+    rank_matrix = []
+    for scores in all_scores:
+        # columns 순서대로 값 추출 (없으면 0.0)
+        values = [scores.get(c, 0.0) for c in columns]
+        # 랭크 산출 (높을수록 좋은 랭크)
+        ranks = np.argsort(np.argsort(values))  # 0이 최저, n-1이 최고
+        norm_ranks = (ranks + 1) / len(columns)  # 1/n ~ 1
+        rank_matrix.append(dict(zip(columns, norm_ranks)))
+    
+    # Step 2: column별로 median rank 산출
     ensembled_scores = {}
-    for col in column_descriptions.keys():
-        col_scores = [scores.get(col, 0.0) for scores in all_scores if col in scores]
-        if col_scores:
-            # Use median for robustness against outliers
-            ensembled_scores[col] = statistics.median(col_scores)
-        else:
-            ensembled_scores[col] = 0.0
+    for c in columns:
+        col_ranks = [ranks[c] for ranks in rank_matrix]
+        ensembled_scores[c] = float(np.median(col_ranks))
     
     return ensembled_scores
+
 
 def stable_cosine_similarity(column_descriptions: Dict[str, str], question: str) -> Dict:
     """More stable semantic similarity using sentence transformers"""

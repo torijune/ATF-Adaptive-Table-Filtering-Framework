@@ -1,4 +1,3 @@
-
 # TCRF: Table Column-Row Filtering for Table-based Question Answering
 
 TCRF (Table Column-Row Filtering) is a modular and extensible Table QA system designed to enhance table understanding and answer generation by intelligently filtering irrelevant columns and rows. This project combines LLM-based reasoning with traditional information retrieval techniques for robust and adaptive QA over structured data.
@@ -71,4 +70,53 @@ graph TD
     F --> G
     G --> H
     H --> I
+```
+
+### 📊 Detailed Flow: column_relevance_checker
+
+```mermaid
+%%{init: {'theme':'default', 'flowchart': {'nodeSpacing': 20, 'rankSpacing': 20}}}%%
+graph TD
+    subgraph column_relevance_checker
+        A1[Input: Question + Raw Table]
+        A2[LLM-based Column Description]
+        A3[Embedding Similarity (Cosine)]
+        A4[Column Score Fusion]
+        A5[Column Score Clustering]
+        A6[Output: column_relevance_scores]
+        
+        A1 --> A2
+        A1 --> A3
+        A2 --> A4
+        A3 --> A4
+        A4 --> A5
+        A5 --> A6
+    end
+```
+
+### 📊 Detailed Flow: cluster_selection (Ensemble Strategy)
+
+```mermaid
+%%{init: {'theme':'default', 'flowchart': {'nodeSpacing': 20, 'rankSpacing': 20}}}%%
+graph TD
+    subgraph cluster_selection
+        B1[Input: column_clusters, score_dict, cluster_centers, question]
+        B2[Semantic Similarity Method]
+        B3[MCDM Scoring Method]
+        B4[Adaptive Threshold Method]
+        B5[Voting Mechanism]
+        B6[Select top-k columns from other clusters]
+        B7[Include essential_columns]
+        B8[Output: selected_cluster, filtered_columns]
+        
+        B1 --> B2
+        B1 --> B3
+        B1 --> B4
+        B2 --> B5
+        B3 --> B5
+        B4 --> B5
+        B5 --> B6
+        B6 --> B7
+        B7 --> B8
+    end
 ```

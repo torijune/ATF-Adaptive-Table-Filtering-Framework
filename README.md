@@ -72,25 +72,27 @@ graph TD
     H --> I
 ```
 
-### 📊 Detailed Flow: column_relevance_checker
+### 📊 Detailed Flow:  
 
 ```mermaid
 %%{init: {'theme':'default', 'flowchart': {'nodeSpacing': 20, 'rankSpacing': 20}}}%%
 graph TD
     subgraph column_relevance_checker
         A1[Input: Question + Raw Table]
-        A2[LLM-based Column Description]
-        A3[Embedding Similarity - Cosine Similarity]
-        A4[Column Score Fusion]
-        A5[Column Score Clustering]
-        A6[Output: column_relevance_scores]
+        A2[LLM-based Column Description Generation]
+        A3[LLM-based Column Scoring]
+        A4[Cosine Similarity with Question]
+        A5[Fusion: LLM Score + Cosine Similarity]
+        A6[Clustering Columns]
+        A7[Output: column_relevance_scores + cluster assignments]
         
         A1 --> A2
-        A1 --> A3
-        A2 --> A4
-        A3 --> A4
+        A2 --> A3
+        A1 --> A4
+        A3 --> A5
         A4 --> A5
         A5 --> A6
+        A6 --> A7
     end
 ```
 

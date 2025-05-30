@@ -47,3 +47,28 @@ See our [Improvement Roadmap](#) for full implementation phases:
 - Phase 4: Real-time adaptation, modular reasoning engine, cross-modal QA
 
 ---
+
+## FlowChart
+
+```mermaid
+%%{init: {'theme':'default', 'flowchart': {'nodeSpacing': 20, 'rankSpacing': 20}}}%%
+graph TD
+    A[data_loader]
+    B[column_relevance_checker]
+    C[column_cluster_agent]
+    D[essential_column_node]
+    E[select_column_agent]
+    F[row_ranker]
+    G[final_table_selecter]
+    H[responder]
+    I[END]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+```

@@ -80,7 +80,7 @@ graph TD
     subgraph column_relevance_checker
         A1[Input: Question + Raw Table]
         A2[LLM-based Column Description]
-        A3[Embedding Similarity (Cosine)]
+        A3[Embedding Similarity (Cosine Similarity)]
         A4[Column Score Fusion]
         A5[Column Score Clustering]
         A6[Output: column_relevance_scores]

@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Tuple
+from typing import Dict
 import openai
 import numpy as np
 from collections import defaultdict
@@ -19,10 +19,14 @@ LLM Column Description Robustness 업그레이드 전략
 3. 고민중...
 '''
 def column_description(table_columns, question, raw_table=None) -> Dict:
-    """Enhanced column description with more stable sampling"""
-    describing_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)  # Lower temperature for consistency
 
+    # Temperature 낮춰서 최대한 보수적으로 출력하도록 -> 일관성을 위해
+    describing_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
+
+    # 각각의 column의 특징 (한번만 등장하는 unique한 column & 중복 등장이 있는 범주형 column)
+    ## 각각의 column에 맞춰서 다르게 Description에 추가하여 성능을 더 높임
     column_blocks = []
+    col_examples_map = {}
     for col in table_columns:
         if raw_table is not None:
             try:
@@ -30,20 +34,26 @@ def column_description(table_columns, question, raw_table=None) -> Dict:
                 val_counts = col_values.value_counts()
                 
                 # More stable sampling strategy
-                sample_values = []
                 
-                # First, get most frequent values (if any)
-                frequent_vals = val_counts[val_counts > 1].head(3).index.tolist()
+                # 같은 값이 두번이상 등장하는 column -> 범주형으로 판단
+                ## 10개 이하이면 모든 것들을 다 넣고
+                if len(val_counts[val_counts > 1]) <= 10:
+                    frequent_vals = val_counts[val_counts > 1].index.tolist() 
+                else:
+                ## 11개 이상이면 5개만 넣는 방식
+                    frequent_vals = val_counts[val_counts > 1].head(5).index.tolist()
+                sample_values = []
                 sample_values.extend(frequent_vals)
                 
-                # Then, get some unique values to show diversity
-                unique_vals = val_counts[val_counts == 1].head(2).index.tolist()
+                # 각각 한번만 등장하는 것은 각 row에 unique한 값들이 등장하는 column -> 범주형이 아닌 것으로 판단
+                unique_vals = val_counts[val_counts == 1].head(5).index.tolist()
                 sample_values.extend(unique_vals)
                 
-                # Remove duplicates while preserving order
+                # head로 넣는 경우에 중복을 방지하기 위해
                 seen = set()
                 sample_values = [x for x in sample_values if not (x in seen or seen.add(x))]
                 
+                # 에러 예외처리를 위한 If문 -> 넣을만한게 없으면 그냥 해당 column의 dtype으로 대체
                 if sample_values:
                     sample_text = f" (Examples: {', '.join(sample_values[:5])})"
                 else:
@@ -53,6 +63,7 @@ def column_description(table_columns, question, raw_table=None) -> Dict:
                 sample_text = f" (Data type: {raw_table[col].dtype if col in raw_table.columns else 'unknown'})"
         else:
             sample_text = ""
+        col_examples_map[col] = sample_text
         column_blocks.append(f"{col}{sample_text}")
 
     formatted_columns = "\n".join(column_blocks)
@@ -85,6 +96,11 @@ def column_description(table_columns, question, raw_table=None) -> Dict:
             col, desc = line.split(":", 1)
             descriptions[col.strip()] = desc.strip()
             
+    # Append the original example text to each description
+    for col in descriptions:
+        if col in col_examples_map:
+            descriptions[col] += f" {col_examples_map[col]}"
+            
     return descriptions
 
 '''
@@ -94,10 +110,8 @@ LLM Scoring Robustness 업그레이드 전략
 3. 추후에 Bi-Encoder Similiarity과 함께 Clustering하긴하지만 LLM Scoring 과정에 수식적인 부분으로 Robustness를 보장해주면 좋을 것 같음
 4. 고민중
 '''
-import numpy as np
-import statistics
-from typing import Dict
 
+# LLM Socring - LLM Ensemble + Ranking을 통해 LLM의 평가에 Robustness를 더함
 def ensemble_llm_score(column_descriptions: Dict[str, str], question: str, num_iterations: int = 3) -> Dict:
     """Run LLM scoring multiple times and ensemble the results using rank-based aggregation."""
     scoring_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)  # Set to 0 for deterministic results
@@ -156,35 +170,54 @@ def ensemble_llm_score(column_descriptions: Dict[str, str], question: str, num_i
             print(f"Warning: LLM scoring iteration {i+1} failed: {e}")
             continue
     
-    # Ensemble the scores using rank-based aggregation
+    # rank-based aggregation를 활용하여 LLM Score ensemble 진행
     if not all_scores:
         return {col: 0.0 for col in columns}
-    
-    # Step 1: 각 iteration의 score를 랭크로 변환 후 정규화 (1/n ~ 1)
+
+    # 각 iteration의 score를 랭크로 변환 후 정규화 (1/n ~ 1)
     rank_matrix = []
     for scores in all_scores:
         # columns 순서대로 값 추출 (없으면 0.0)
         values = [scores.get(c, 0.0) for c in columns]
-        # 랭크 산출 (높을수록 좋은 랭크)
+        # 랭크 산출 -> LLM의 Score가 높을수록 좋은 랭크
         ranks = np.argsort(np.argsort(values))  # 0이 최저, n-1이 최고
         norm_ranks = (ranks + 1) / len(columns)  # 1/n ~ 1
         rank_matrix.append(dict(zip(columns, norm_ranks)))
-    
-    # Step 2: column별로 median rank 산출
+
+    # column별로 median rank 산출
     ensembled_scores = {}
     for c in columns:
         col_ranks = [ranks[c] for ranks in rank_matrix]
         ensembled_scores[c] = float(np.median(col_ranks))
-    
-    return ensembled_scores
+
+    # --- Soft Thresholding based on LLM score variance ---
+    # Columns with high variance (low reliability) get penalized
+    # Final score = mean_score * (1 / (1 + std_dev))
+    # Step 1. Extract raw scores per column across iterations
+    score_matrix = {col: [] for col in columns}
+    for scores in all_scores:
+        for col in columns:
+            score_matrix[col].append(scores.get(col, 0.0))
+
+    # Compute mean, std, and reliability per column
+    mean_std_reliability = {}
+    for col in columns:
+        col_scores = score_matrix[col]
+        mean = float(np.mean(col_scores))
+        std = float(np.std(col_scores))
+        reliability = 1.0 / (1.0 + std)  # lower std = higher reliability
+        mean_std_reliability[col] = (mean, std, reliability)
+
+    # Apply soft threshold adjustment
+    adjusted_scores = {col: mean * reliability for col, (mean, std, reliability) in mean_std_reliability.items()}
+
+    return adjusted_scores
 
 
 def stable_cosine_similarity(column_descriptions: Dict[str, str], question: str) -> Dict:
-    """More stable semantic similarity using sentence transformers"""
     try:
         from sentence_transformers import SentenceTransformer
         
-        # Use a more stable model
         model = SentenceTransformer('all-MiniLM-L6-v2')
         
         # Normalize question and descriptions
@@ -196,15 +229,15 @@ def stable_cosine_similarity(column_descriptions: Dict[str, str], question: str)
             for col, desc in column_descriptions.items()
         ]
         
-        # Encode question and descriptions
+        # question descriptions 인코딩
         question_embedding = model.encode([normalized_question])
         desc_embeddings = model.encode(normalized_descriptions)
         
-        # Calculate cosine similarities
+        # cosine similarity 계산
         from sklearn.metrics.pairwise import cosine_similarity
         similarities = cosine_similarity(question_embedding, desc_embeddings)[0]
         
-        # Normalize to 0-1 range and apply slight smoothing
+        # 0-1으로 정규화 진행
         min_sim = similarities.min()
         max_sim = similarities.max()
         if max_sim > min_sim:
@@ -277,5 +310,4 @@ def column_relevance_fn(state):
             "column_description": column_desc
             }
 
-# Updated node
 column_relevance_node = RunnableLambda(column_relevance_fn)

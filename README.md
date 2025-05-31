@@ -6,21 +6,25 @@ TCRF (Table Column-Row Filtering) is a modular and extensible Table QA system de
 
 ## 🧠 System Architecture
 
-The system is organized into four primary stages:
+The system is organized into five primary stages:
 
-1. **ColumnRelevance (LLM + Embedding Fusion)**  
+1. **PredictAnswerEntity (LLM-based Entity Type Inference)**  
+   - Infers the likely entity type (e.g., Person, Organization, Date) of the expected answer based on the question.
+   - Enables downstream filtering, prompt selection, or context shaping to guide accurate answer generation.
+
+2. **ColumnRelevance (LLM + Embedding Fusion)**  
    - Analyzes the relevance of each column to the question using a combination of LLM scores and embedding-based similarity (e.g., cosine, cross-encoder).
    - Also includes sample value analysis and structure-aware scoring to distinguish categorical and numerical fields.
 
-2. **Column Clustering**  
+3. **Column Clustering**  
    - Groups semantically **similar columns** using **K-means** clustering methods.
    - Preserves columns from the primary cluster and supplements with the most relevant column from other clusters.
 
-3. **RowRanker (Hybrid Retrieval)**  
+4. **RowRanker (Hybrid Retrieval)**  
    - Computes row relevance using a hybrid of sparse (TF-IDF, BM25) and dense retrieval.
    - Applies softmax normalization and proportionally selects rows based on table size for efficiency.
 
-4. **FinalTableSelector**  
+5. **FinalTableSelector**  
    - Combines selected columns and rows into a compact context table.
    - Feeds the result to an LLM or Tool Agent for final answer generation.
 
@@ -50,7 +54,6 @@ See our [Improvement Roadmap](#) for full implementation phases:
 ## FlowChart
 
 ```mermaid
-%%{init: {'theme':'default', 'flowchart': {'nodeSpacing': 20, 'rankSpacing': 20}}}%%
 graph TD
     A[data_loader]
     B[predict_answer_entity_node]
@@ -79,6 +82,19 @@ graph TD
 ```mermaid
 %%{init: {'theme':'default', 'flowchart': {'nodeSpacing': 20, 'rankSpacing': 20}}}%%
 graph TD
+    subgraph predict_answer_entity_node
+        P1[Input: Question]
+        P2[LLM CoT Reasoning]
+        P3[Score Each Entity Type]
+        P4[Select Most Probable Type]
+        P5[Output: predicted_answer_entity]
+        
+        P1 --> P2
+        P2 --> P3
+        P3 --> P4
+        P4 --> P5
+    end
+
     subgraph column_relevance_checker
         A1[Input: Question + Raw Table]
         A2[LLM-based Column Description Generation]

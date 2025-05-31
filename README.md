@@ -151,10 +151,10 @@ graph TD
         R2[Join column values per row into text]
         R3[TF-IDF Vectorization]
         R4[BM25 Scoring]
-        R5[Dense Embedding Similarity (Sentence-BERT)]
+        R5[Dense Embedding Similarity - Sentence-BERT]
         R6[Softmax Normalization]
-        R7[Weighted Fusion: TF-IDF (0.4) + BM25 (0.3) + Dense (0.3)]
-        R8[Top-k Selection (e.g., top 40%)]
+        R7[Weighted Fusion: TF-IDF + BM25 + Dense]
+        R8[Top-k Selection - top 40%]
         R9[Output: selected_rows, top_row_indices]
 
         R1 --> R2

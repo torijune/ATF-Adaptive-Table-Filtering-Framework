@@ -140,3 +140,32 @@ graph TD
         B7 --> B8
     end
 ```
+
+### 📊 Detailed Flow: row_ranker
+
+```mermaid
+%%{init: {'theme':'default', 'flowchart': {'nodeSpacing': 20, 'rankSpacing': 20}}}%%
+graph TD
+    subgraph row_ranker
+        R1[Input: filtered_columns, raw_table, question]
+        R2[Join column values per row into text]
+        R3[TF-IDF Vectorization]
+        R4[BM25 Scoring]
+        R5[Dense Embedding Similarity (Sentence-BERT)]
+        R6[Softmax Normalization]
+        R7[Weighted Fusion: TF-IDF (0.4) + BM25 (0.3) + Dense (0.3)]
+        R8[Top-k Selection (e.g., top 40%)]
+        R9[Output: selected_rows, top_row_indices]
+
+        R1 --> R2
+        R2 --> R3
+        R2 --> R4
+        R2 --> R5
+        R3 --> R6
+        R4 --> R6
+        R5 --> R6
+        R6 --> R7
+        R7 --> R8
+        R8 --> R9
+    end
+```

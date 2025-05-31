@@ -18,7 +18,7 @@ LLM Column Description Robustness 업그레이드 전략
 2. 주어진 내용에 대한 묘사를 Benchmark 성능 평가를 하는 것을 중간에 도입하여 일정 점수 이하면 reject을 하여 재생성하는 loop 추가
 3. 고민중...
 '''
-def column_description(table_columns, question, raw_table=None) -> Dict:
+def column_description(table_columns, question, raw_table=None, predicted_entity=None) -> Dict:
 
     # Temperature 낮춰서 최대한 보수적으로 출력하도록 -> 일관성을 위해
     describing_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
@@ -72,7 +72,8 @@ def column_description(table_columns, question, raw_table=None) -> Dict:
     You are a table analysis expert. Generate concise, consistent descriptions for each column.
 
     Question Context: {question}
-    
+    {"Expected Answer Type: " + predicted_entity if predicted_entity else ""}
+
     Columns with Examples:
     {formatted_columns}
 
@@ -280,13 +281,14 @@ def column_relevance_fn(state):
     
     raw_table = state["raw_table"]
     question = state["question"]
+    predicted_entity = state.get("predicted_answer_entity", None)
     table_columns = list(raw_table.columns)
 
     print(f"[ColumnRelevance] Processing {len(table_columns)} columns")
     print(f"[ColumnRelevance] Question: {question}")
 
     # Generate stable column descriptions
-    column_desc = column_description(table_columns, question, raw_table)
+    column_desc = column_description(table_columns, question, raw_table, predicted_entity)
     print(f"[ColumnRelevance] Column Descriptions Generated")
 
     # Get ensemble LLM scores (multiple runs for stability)

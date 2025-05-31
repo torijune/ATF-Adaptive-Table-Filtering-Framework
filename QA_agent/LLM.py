@@ -1,4 +1,3 @@
-from multiprocessing.connection import answer_challenge
 import os
 import openai
 import json
@@ -139,15 +138,23 @@ def responder_fn(state: dict) -> dict:
         
         # JSON 리스트 추출 시도
         parsed_answer = extract_json_list(raw_answer)
+
+        # Try to extract predicted entity type if specified in response
+        predicted_entity_type = None
+        entity_type_match = re.search(r'"?predicted_answer_entity"?\s*[:=]\s*"?(.*?)"?[\n,}]', raw_answer, re.IGNORECASE)
+        if entity_type_match:
+            predicted_entity_type = entity_type_match.group(1).strip()
+
+        print(f"[LLM Responder] 🧠 Predicted Entity Type: {predicted_entity_type}")
         
         print(f"[LLM Responder] ✅ Parsed Answer: {parsed_answer}")
         print(f"\n [LLM Responder] ✅ Real Answer: {answer}")
         
-        return {**state, "LLM_answer": parsed_answer}
+        return {**state, "LLM_answer": parsed_answer, "predicted_answer_entity": predicted_entity_type}
         
     except Exception as e:
         print(f"[LLM Responder] ❌ Error: {e}")
-        return {**state, "LLM_answer": ["Answer not found in the table."]}
+        return {**state, "LLM_answer": ["Answer not found in the table."], "predicted_answer_entity": None}
 
 # 노드 생성
 responder_node = RunnableLambda(responder_fn)

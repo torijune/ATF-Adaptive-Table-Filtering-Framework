@@ -352,4 +352,4 @@ def ensemble_cluster_selection_fn(state):
     }
 
 # Create runnable node for ensemble method only
-ensemble_evlauation_node = RunnableLambda(ensemble_cluster_selection_fn)
+ensemble_evluation_node = RunnableLambda(ensemble_cluster_selection_fn)

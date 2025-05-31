@@ -17,8 +17,9 @@ def extract_essential_columns_fn(state: Dict) -> Dict:
     question = state["question"]
     raw_table = state["raw_table"]
     all_columns = raw_table.columns
+    predicted_entity = state.get("predicted_answer_entity", None)
 
-    prompt = f"""
+    base_prompt = f"""
     You are a table question answering expert.
 
     Your task is to identify the essential table columns required to answer a given question, from the list of available columns.
@@ -32,9 +33,14 @@ def extract_essential_columns_fn(state: Dict) -> Dict:
     Question: {question}
 
     Available Columns: {', '.join(all_columns)}
-
-    Essential Columns:
     """
+
+    if predicted_entity:
+        base_prompt += f"\n\nExpected Answer Type: {predicted_entity}"
+
+    base_prompt += "\n\nEssential Columns:"
+
+    prompt = base_prompt
 
     response = llm.invoke(prompt)
     extracted = response.content.strip()

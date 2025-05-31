@@ -53,14 +53,15 @@ See our [Improvement Roadmap](#) for full implementation phases:
 %%{init: {'theme':'default', 'flowchart': {'nodeSpacing': 20, 'rankSpacing': 20}}}%%
 graph TD
     A[data_loader]
-    B[column_relevance_checker]
-    C[column_cluster_agent]
-    D[essential_column_node]
-    E[select_column_agent]
-    F[row_ranker]
-    G[final_table_selecter]
-    H[responder]
-    I[END]
+    B[predict_answer_entity_node]
+    C[column_relevance_checker]
+    D[column_cluster_agent]
+    E[essential_column_node]
+    F[select_column_agent]
+    G[row_ranker]
+    H[final_table_selecter]
+    I[responder]
+    J[END]
 
     A --> B
     B --> C
@@ -70,6 +71,7 @@ graph TD
     F --> G
     G --> H
     H --> I
+    I --> J
 ```
 
 ### 📊 Detailed Flow:  

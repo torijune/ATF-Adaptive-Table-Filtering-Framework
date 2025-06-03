@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.runnables import RunnableLambda
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 

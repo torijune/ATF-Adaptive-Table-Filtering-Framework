@@ -11,7 +11,7 @@ from langchain_core.runnables import RunnableLambda
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)  # 더 낮은 temperature로 일관성 향상
+llm = ChatOpenAI(model="gpt-4o", temperature=0.1)  # 더 낮은 temperature로 일관성 향상
 
 Responder_PROMPT = """
 You are a highly capable data analyst working with tabular data.

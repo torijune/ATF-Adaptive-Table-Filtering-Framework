@@ -50,6 +50,16 @@ class AgentState(TypedDict):
     real_answer: Annotated[str, "실제 정답"]
     LLM_answer: Annotated[str, "LLM이 생성한 정답"]
 
+    ## Experiment components
+    table_id: Annotated[str, "SQLite에서 추출된 테이블의 고유 ID"]
+    raw_table_size: Annotated[tuple[int, int], "Raw 테이블의 크기 (행, 열)"]
+    raw_table_cell_counts: Annotated[int, "Raw 테이블의 전체 셀 개수 (행 × 열)"]
+    table_columns: Annotated[list[str], "Raw 테이블의 컬럼 이름 리스트"]
+    filtered_table_size: Annotated[tuple[int, int], "선택된 테이블의 크기 (행, 열)"]
+    filtered_table_cell_counts: Annotated[int, "선택된 테이블의 셀 개수 (행 × 열)"]
+    selected_column_cluster_id: Annotated[int, "선택된 컬럼 클러스터 ID"]
+    
+
 def build_workflow_graph() -> Runnable:
     builder = StateGraph(state_schema=AgentState)
 

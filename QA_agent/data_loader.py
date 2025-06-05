@@ -1,3 +1,8 @@
+'''
+실험 및 평가를 위한 data extraction:
+index, table_id, question, answer, raw_table, raw_table_size, raw_table_cell_counts, table_columns
+'''
+
 from langchain_core.runnables import RunnableLambda
 
 def get_table_question_answer_fn(state):
@@ -10,7 +15,6 @@ def get_table_question_answer_fn(state):
     index = state["index"]
 
     print(f"[DataLoader] Loading question index: {index}")
-    # print(f"[DataLoader] DB Path: {raw_db_file_path}, JSON Path: {json_df_file_path}")
 
     with open(json_df_file_path, 'r') as f:
         json_df = json.load(f)
@@ -21,8 +25,6 @@ def get_table_question_answer_fn(state):
     table_id = f'table_{raw_table_id}'.replace("-", "_")
     safe_table_id = f'"{table_id}"'
 
-    # print(f"[DataLoader] Constructed table name: {safe_table_id}")
-
     sql_query = f"SELECT * FROM {safe_table_id}"
 
     try:
@@ -30,14 +32,14 @@ def get_table_question_answer_fn(state):
         raw_table = df
         print(f"[DataLoader] Table loaded with shape: {df.shape}")
     except Exception as e:
-        raw_table = f"[SQL Error] {e}"
-        df = None
         print(f"[DataLoader] SQL Error: {e}")
+        raw_table = pd.DataFrame()
+        df = raw_table
 
     conn.close()
 
     def serialize_table(df):
-        if df is None:
+        if df.empty:
             return "[No Table]"
         lines = [" | ".join(df.columns)]
         for _, row in df.iterrows():
@@ -48,14 +50,24 @@ def get_table_question_answer_fn(state):
     question = json_df["question"][str(index)]
     answer = json_df["answer"][str(index)]
 
+    # New fields
+    raw_table_size = raw_table.shape  # (rows, cols)
+    raw_table_cell_counts = raw_table_size[0] * raw_table_size[1]
+    table_columns = list(raw_table.columns)
+
     print(f"[DataLoader] Question: {question}")
     print(f"[DataLoader] Answer: {answer}")
 
-    return {**state,
-            "raw_table": raw_table,
-            "table_text": table_text,
-            "question": question,
-            "answer": answer
-            }
+    return {
+        **state,
+        "table_id": table_id,
+        "raw_table": raw_table,
+        "table_text": table_text,
+        "question": question,
+        "answer": answer,
+        "raw_table_size": raw_table_size,
+        "raw_table_cell_counts": raw_table_cell_counts,
+        "table_columns": table_columns,
+    }
 
 dataload_node = RunnableLambda(get_table_question_answer_fn)

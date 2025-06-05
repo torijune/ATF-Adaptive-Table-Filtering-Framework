@@ -115,7 +115,7 @@ LLM Scoring Robustness 업그레이드 전략
 '''
 
 # LLM Socring - LLM Ensemble + Ranking을 통해 LLM의 평가에 Robustness를 더함
-def ensemble_llm_score(column_descriptions: Dict[str, str], question: str, num_iterations: int = 3) -> Dict:
+def ensemble_llm_score(column_descriptions: Dict[str, str], question: str, predicted_entity=None, num_iterations: int = 3) -> Dict:
     """Run LLM scoring multiple times and ensemble the results using rank-based aggregation."""
     scoring_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)  # Set to 0 for deterministic results
     
@@ -125,6 +125,7 @@ def ensemble_llm_score(column_descriptions: Dict[str, str], question: str, num_i
     You are an expert in question-answering with tabular data.
     
     Question: {question}
+    {"Expected Answer Type: " + predicted_entity if predicted_entity else ""}
     
     Table Columns:
     {formatted_columns}
@@ -294,7 +295,7 @@ def column_relevance_fn(state):
     print(f"[ColumnRelevance] Column Descriptions Generated")
 
     # Get ensemble LLM scores (multiple runs for stability)
-    llm_scores = ensemble_llm_score(column_desc, question, num_iterations=3)
+    llm_scores = ensemble_llm_score(column_desc, question, predicted_entity, num_iterations=3)
     print(f"[ColumnRelevance] Ensemble LLM Scores: {llm_scores}")
 
     # Get stable similarity scores

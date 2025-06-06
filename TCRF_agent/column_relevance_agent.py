@@ -23,7 +23,7 @@ LLM Column Description Robustness 업그레이드 전략
 def column_description(table_columns, question, raw_table=None, predicted_entity=None) -> Dict:
 
     # Temperature 낮춰서 최대한 보수적으로 출력하도록 -> 일관성을 위해
-    describing_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
+    describing_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
 
     # 각각의 column의 특징 (한번만 등장하는 unique한 column & 중복 등장이 있는 범주형 column)
     ## 각각의 column에 맞춰서 다르게 Description에 추가하여 성능을 더 높임

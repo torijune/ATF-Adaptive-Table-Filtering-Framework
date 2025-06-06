@@ -17,6 +17,7 @@ def final_table_select_fn(state):
     # 선택된 컬럼만 추출
     filtered_df = selected_rows[filtered_columns]
 
+    state["filtered_df"] = filtered_df
     # linearized 텍스트로 변환
     table_text = linearize_row_wise(filtered_df)
 
@@ -25,7 +26,8 @@ def final_table_select_fn(state):
 
     return {
         **state,
-        "final_table_text": table_text
+        "final_table_text": table_text,
+        "filtered_df": filtered_df
     }
 
 final_table_select_node = RunnableLambda(final_table_select_fn)

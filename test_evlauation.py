@@ -1,4 +1,4 @@
-from QA_graph.graph_workflow import build_workflow_graph
+from TCRF_graph.graph_workflow import build_workflow_graph
 import json
 from sklearn.metrics import accuracy_score, f1_score
 import re

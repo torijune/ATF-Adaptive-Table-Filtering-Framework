@@ -10,7 +10,7 @@ from langchain_core.runnables import RunnableLambda
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
 
 def extract_essential_columns_fn(state: Dict) -> Dict:
     import ast

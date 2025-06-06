@@ -25,7 +25,7 @@ Your task is to read the following table and answer the question as accurately a
 4. **Extract the answer** - This should be one of the column values, such as a name, number, or label.
 5. **Only use the table information provided**, do not guess or infer from external knowledge.
 6. **Format your response** as a **JSON list**
-7. **If no rows satisfy all conditions**, return: ["Answer not found in the table."]
+7. **If no rows satisfy all conditions**, return: ["None"]
 
 ---
 

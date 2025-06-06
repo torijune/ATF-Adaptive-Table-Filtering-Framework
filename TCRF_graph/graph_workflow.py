@@ -3,15 +3,15 @@ from typing import Annotated, TypedDict
 from langchain_core.runnables import Runnable
 from pandas import DataFrame
 
-from QA_agent.data_loader import dataload_node
-from QA_agent.LLM import responder_node
-from QA_agent.column_relevance_agent import column_relevance_node
-from QA_agent.column_clustering_agent import column_clustering_node
-from QA_agent.row_ranker import row_ranker_node
-from QA_agent.final_table_selecter import final_table_select_node
-from QA_agent.clustering_evluation import ensemble_evluation_node
-from QA_agent.essential_columns import extract_essential_columns_node
-from QA_agent.predict_answer_entity import predict_answer_entity_node
+from TCRF_agent.data_loader import dataload_node
+from TCRF_agent.LLM import responder_node
+from TCRF_agent.column_relevance_agent import column_relevance_node
+from TCRF_agent.column_clustering_agent import column_clustering_node
+from TCRF_agent.row_ranker import row_ranker_node
+from TCRF_agent.final_table_selecter import final_table_select_node
+from TCRF_agent.clustering_evluation import ensemble_evluation_node
+from TCRF_agent.essential_columns import extract_essential_columns_node
+from TCRF_agent.predict_answer_entity import predict_answer_entity_node
 
 class AgentState(TypedDict):
     # 데이터를 불러오기 위한
@@ -45,6 +45,8 @@ class AgentState(TypedDict):
     ## row_ranker
     selected_rows: Annotated[list[str], "선택된 클러스터에 속한 row 리스트"]
     final_table_text: Annotated[str, "최종 선형화 된 table"]
+
+    filtered_df: Annotated[DataFrame, "최종 필터링된 테이블의 pandas 데이터프레임"]
 
     ## LLM
     real_answer: Annotated[str, "실제 정답"]
@@ -82,7 +84,8 @@ def build_workflow_graph() -> Runnable:
     builder.add_edge("essential_column_node", "select_column_agent")
     builder.add_edge("select_column_agent", "row_ranker")
     builder.add_edge("row_ranker", "final_table_selecter")
-    builder.add_edge("final_table_selecter", "responder")
-    builder.add_edge("responder", END)
+    builder.add_edge("final_table_selecter", END)
+    # builder.add_edge("final_table_selecter", "responder")
+    # builder.add_edge("responder", END)
 
     return builder.compile()

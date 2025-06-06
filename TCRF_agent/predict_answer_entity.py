@@ -11,7 +11,7 @@ from langchain_core.runnables import RunnableLambda
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.5)
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
 
 Enetity_PROMPT = """
 You are a Question Answering expert.

@@ -2,3 +2,4 @@ data/
 myvenv/
 *.ipynb
 *.env
+outputs/

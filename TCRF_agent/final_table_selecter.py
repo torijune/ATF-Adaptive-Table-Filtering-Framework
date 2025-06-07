@@ -21,8 +21,8 @@ def final_table_select_fn(state):
     # linearized 텍스트로 변환
     table_text = linearize_row_wise(filtered_df)
 
-    print(f"[FinalTableSelector] ✅ Filtered columns: {filtered_columns}")
-    print(f"[FinalTableSelector] 📋 Final table (linearized):\n{table_text}")
+    # print(f"[FinalTableSelector] ✅ Filtered columns: {filtered_columns}")
+    # print(f"[FinalTableSelector] 📋 Final table (linearized):\n{table_text}")
 
     return {
         **state,

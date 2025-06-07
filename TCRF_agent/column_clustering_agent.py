@@ -19,9 +19,12 @@ def column_clustering_fn(state):
 
     clustered = {col: int(cluster) for col, cluster in zip(column_names, labels)}
 
-    print(f"[Clustering] Cluster labels: {clustered}")
-    print(f"[Clustering] Cluster centers: {kmeans.cluster_centers_}")
+    # print(f"[Clustering] Cluster labels: {clustered}")
+    # print(f"[Clustering] Cluster centers: {kmeans.cluster_centers_}")
 
-    return {**state, "column_clusters": clustered, "cluster_centers": kmeans.cluster_centers_.tolist()}
+    return {**state, 
+            "column_clusters": clustered, 
+            "cluster_centers": kmeans.cluster_centers_.tolist()
+            }
 
 column_clustering_node = RunnableLambda(column_clustering_fn)

@@ -16,7 +16,7 @@ def row_ranker_fn(state):
     question = state["question"]
     selected_columns = state["filtered_columns"]
 
-    print(f"\n[RowRanker] ✅ Selected columns: {selected_columns}")
+    # print(f"\n[RowRanker] ✅ Selected columns: {selected_columns}")
 
     # 각 row를 선택된 컬럼 기준으로 문자열로 병합
     row_texts = raw_table[selected_columns].astype(str).agg(" ".join, axis=1).tolist()
@@ -40,6 +40,10 @@ def row_ranker_fn(state):
     dense_row_embs = dense_model.encode(row_texts, convert_to_tensor=True)
     dense_sim = util.pytorch_cos_sim(dense_question_emb, dense_row_embs)[0].cpu().numpy()
 
+    # print(f"[RowRanker] 🔍 Raw TF-IDF scores:\n{tfidf_sim}")
+    # print(f"[RowRanker] 🔍 Raw BM25 scores:\n{bm25_scores}")
+    # print(f"[RowRanker] 🔍 Raw Dense scores:\n{dense_sim}")
+
     tfidf_norm = normalize_softmax(tfidf_sim)
     bm25_norm = normalize_softmax(bm25_scores)
     dense_norm = normalize_softmax(dense_sim)
@@ -50,18 +54,21 @@ def row_ranker_fn(state):
     top_k = max(1, int(np.ceil(len(row_texts) * top_k_ratio)))
     top_indices = fusion_scores.argsort()[-top_k:][::-1]
 
-    print(f"[RowRanker] 🔍 Row fusion scores (TF-IDF + BM25 + Dense, softmax normalized):\n{fusion_scores}")
-    print(f"[RowRanker] 🏅 Top-{top_k} row indices (based on {top_k_ratio*100}% of {len(row_texts)} rows): {top_indices.tolist()}")
+    # print(f"[RowRanker] 🔍 Row fusion scores (TF-IDF + BM25 + Dense, softmax normalized):\n{fusion_scores}")
+    # print(f"[RowRanker] 🏅 Top-{top_k} row indices (based on {top_k_ratio*100}% of {len(row_texts)} rows): {top_indices.tolist()}")
 
     # 상위 row만 선택
     selected_rows = raw_table[selected_columns].iloc[top_indices].reset_index(drop=True)
-    print(f"[RowRanker] 📋 Selected rows:\n{selected_rows}")
+    # print(f"[RowRanker] 📋 Selected rows:\n{selected_rows}")
 
     return {
         **state,
         "selected_rows": selected_rows,
         "row_similarity_scores": fusion_scores.tolist(),
-        "top_row_indices": top_indices.tolist()
+        "top_row_indices": top_indices.tolist(),
+        "tfidf_scores": tfidf_sim.tolist(),
+        "bm25_scores": bm25_scores.tolist(),
+        "dense_scores": dense_sim.tolist(),
     }
 
 row_ranker_node = RunnableLambda(row_ranker_fn)

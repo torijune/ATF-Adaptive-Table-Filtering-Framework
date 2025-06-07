@@ -14,7 +14,7 @@ def get_table_question_answer_fn(state):
     json_df_file_path = state["json_df_file_path"]
     index = state["index"]
 
-    print(f"[DataLoader] Loading question index: {index}")
+    # print(f"[DataLoader] Loading question index: {index}")
 
     with open(json_df_file_path, 'r') as f:
         json_df = json.load(f)
@@ -30,9 +30,9 @@ def get_table_question_answer_fn(state):
     try:
         df = pd.read_sql_query(sql_query, conn)
         raw_table = df
-        print(f"[DataLoader] Table loaded with shape: {df.shape}")
+        # print(f"[DataLoader] Table loaded with shape: {df.shape}")
     except Exception as e:
-        print(f"[DataLoader] SQL Error: {e}")
+        # print(f"[DataLoader] SQL Error: {e}")
         raw_table = pd.DataFrame()
         df = raw_table
 
@@ -55,8 +55,8 @@ def get_table_question_answer_fn(state):
     raw_table_cell_counts = raw_table_size[0] * raw_table_size[1]
     table_columns = list(raw_table.columns)
 
-    print(f"[DataLoader] Question: {question}")
-    print(f"[DataLoader] Answer: {answer}")
+    # print(f"[DataLoader] Question: {question}")
+    # print(f"[DataLoader] Answer: {answer}")
 
     return {
         **state,

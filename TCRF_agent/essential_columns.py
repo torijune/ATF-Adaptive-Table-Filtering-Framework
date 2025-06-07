@@ -53,11 +53,11 @@ def extract_essential_columns_fn(state: Dict) -> Dict:
         # Ensure all selected columns exist
         essential_cols = [col for col in essential_cols if col in all_columns]
     except Exception as e:
-        print(f"[Essential Column Extracter] ⚠️ Failed to parse response: {extracted} — {e}")
+        # print(f"[Essential Column Extracter] ⚠️ Failed to parse response: {extracted} — {e}")
         essential_cols = list(all_columns)
 
     state["essential_columns"] = essential_cols
-    print(f"\n[Essential Column Extracter] ✅ Essential Column List: {essential_cols}")
+    # print(f"\n[Essential Column Extracter] ✅ Essential Column List: {essential_cols}")
     return state
 
 extract_essential_columns_node = RunnableLambda(extract_essential_columns_fn)

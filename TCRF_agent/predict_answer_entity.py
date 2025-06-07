@@ -43,15 +43,16 @@ def predict_answer_entity_fn(state):
     response = llm.invoke(prompt)
     try:
         scores = json.loads(response.content)
-        print(f"[PredictAnswerEntity] ✅ LLM Predicted Answer Enetity Type Candidates List: {scores}")
+        # print(f"[PredictAnswerEntity] ✅ LLM Predicted Answer Enetity Type Candidates List: {scores}")
         if isinstance(scores, dict):
             predicted_type = max(scores.items(), key=lambda x: x[1])[0]
         else:
             predicted_type = "Other"
+        state["predicted_answer_entity_scores"] = scores
     except Exception:
         predicted_type = "Other"
 
-    print(f"[PredictAnswerEntity] ✅ LLM Predicted Answer Enetity Type: {predicted_type}")
+    # print(f"[PredictAnswerEntity] ✅ LLM Predicted Answer Enetity Type: {predicted_type}")
     # No fixed set of valid types — use top scoring type directly
 
     state["predicted_answer_entity"] = predicted_type

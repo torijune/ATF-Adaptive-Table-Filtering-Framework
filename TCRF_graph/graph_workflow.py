@@ -28,6 +28,7 @@ class AgentState(TypedDict):
     # 중간 분석 과정들
     ## predict_answer_entity
     predicted_answer_entity: Annotated[str, "LLM이 예측한 Question에 대한 Answer의 entity 타입"]
+    predicted_answer_entity_scores: Annotated[dict[str, float], "LLM이 예측한 엔티티 후보 리스트 및 각 타입에 대한 confidence 점수 (예: {'person': 0.9, 'organization': 0.8, ...})"]
 
     ## column_relevance_agent
     column_description: Annotated[dict[str, str], "LLM이 생성한 Column에 대한 설명 (묘사)"]
@@ -44,7 +45,12 @@ class AgentState(TypedDict):
 
     ## row_ranker
     selected_rows: Annotated[list[str], "선택된 클러스터에 속한 row 리스트"]
+    tfidf_scores: Annotated[list[float], "TF-IDF 기반의 각 row 유사도 점수"]
+    bm25_scores: Annotated[list[float], "BM25 기반의 각 row 유사도 점수"]
+    dense_scores: Annotated[list[float], "SentenceTransformer 기반 dense 유사도 점수"]
+    row_similarity_scores: Annotated[list[float], "TF-IDF, BM25, Dense 유사도 점수의 가중 평균 (softmax normalized)"]
     final_table_text: Annotated[str, "최종 선형화 된 table"]
+    top_row_indices: Annotated[list[int], "유사도 기준 상위 N개의 row index 리스트"]
 
     filtered_df: Annotated[DataFrame, "최종 필터링된 테이블의 pandas 데이터프레임"]
 
@@ -60,6 +66,23 @@ class AgentState(TypedDict):
     filtered_table_size: Annotated[tuple[int, int], "선택된 테이블의 크기 (행, 열)"]
     filtered_table_cell_counts: Annotated[int, "선택된 테이블의 셀 개수 (행 × 열)"]
     selected_column_cluster_id: Annotated[int, "선택된 컬럼 클러스터 ID"]
+    llm_score: Annotated[dict[str, float], "각 column에 대한 LLM 기반 relevance 점수 (단일 값)"]
+    llm_debug_scores: Annotated[dict[str, dict[str, float]], "LLM score 계산에 사용된 세부 지표 (예: rank matrix, mean/std 등)"]
+    column_similarity_scores: Annotated[dict[str, float], "각 column에 대한 cosine 유사도 기반 relevance 점수"]
+    semantic_scores: Annotated[dict[str, float], "semantic 방식으로 선택된 클러스터별 점수"]
+    mcdm_scores: Annotated[dict[str, float], "MCDM 방식으로 선택된 클러스터별 점수"]
+    adaptive_scores: Annotated[dict[str, float], "adaptive 방식으로 선택된 클러스터별 점수"]
+    ensemble_scores: Annotated[dict[str, float], "ensemble 방식으로 선택된 클러스터별 점수"]
+    ensemble_details: Annotated[dict[str, dict[str, float]], "ensemble 방식에서 사용된 개별 스코어들의 구성 정보 (예: {'cluster_0': {'llm': 0.9, 'semantic': 0.85, ...}})"]
+    ensemble_confidences: Annotated[dict[str, float], "ensemble 방식에서 각 클러스터에 대해 계산된 최종 confidence score"]
+    voting_results: Annotated[dict[int, int], "ensemble 방식에서 클러스터별 투표 수 (예: {0: 1, 1: 2, 2: 0})"]
+
+    raw_table_token_counts: Annotated[int, "Raw 테이블의 토큰 수"]
+    filtered_table_token_counts: Annotated[int, "Filtered 테이블의 토큰 수"]
+
+    column_embedding_variance: Annotated[dict[str, float], "선택된 컬럼들의 semantic 분산 (다양성 분석)"]
+
+    ranking_score_weights: Annotated[dict[str, float], "TF-IDF / BM25 / Dense score의 가중치 구성"]
     
 
 def build_workflow_graph() -> Runnable:

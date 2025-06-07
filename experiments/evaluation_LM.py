@@ -14,12 +14,31 @@ from transformers import (
 from TCRF_main import make_response
 import pandas as pd
 import torch
+
+if torch.backends.mps.is_available():
+    device = torch.device("mps")
+else:
+    device = torch.device("cpu")
+
+# Load all model/tokenizer objects globally, only once
+tapas_tokenizer = TapasTokenizer.from_pretrained("google/tapas-base-finetuned-wtq")
+tapas_model = TapasForQuestionAnswering.from_pretrained("google/tapas-base-finetuned-wtq").to(device)
+
+tapex_tokenizer = AutoTokenizer.from_pretrained("microsoft/tapex-base-finetuned-wtq")
+tapex_model = AutoModelForSeq2SeqLM.from_pretrained("microsoft/tapex-base-finetuned-wtq").to(device)
+
+omnitab_tokenizer = AutoTokenizer.from_pretrained("neulab/omnitab-large-finetuned-wtq")
+omnitab_model = AutoModelForSeq2SeqLM.from_pretrained("neulab/omnitab-large-finetuned-wtq").to(device)
+
 import os
 import openai
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 import json
 import re
+
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 def LLM_based_answer(filtered_df, question):
@@ -135,18 +154,19 @@ def LLM_based_answer(filtered_df, question):
     return parsed_answer
 
 
-def tapas_answer(filtered_df, question) -> list:
-    """TAPAS 구현 (공식 모델)"""
-    tokenizer = TapasTokenizer.from_pretrained("google/tapas-base-finetuned-wtq")
-    model = TapasForQuestionAnswering.from_pretrained("google/tapas-base-finetuned-wtq")
+def tapas_answer(filtered_df, question, tokenizer, model) -> list:
 
+    filtered_df = pd.DataFrame(filtered_df)
     inputs = tokenizer(table=filtered_df, queries=[question], return_tensors="pt")
+    inputs = {k: v.to(device) for k, v in inputs.items()}
 
     with torch.no_grad():
         outputs = model(**inputs)
 
     predicted_answer_coordinates, _ = tokenizer.convert_logits_to_predictions(
-        inputs, outputs.logits, outputs.logits_aggregation
+        inputs,
+        outputs.logits.detach().cpu(),
+        outputs.logits_aggregation.detach().cpu()
     )
 
     if not predicted_answer_coordinates[0]:
@@ -154,70 +174,41 @@ def tapas_answer(filtered_df, question) -> list:
     return [filtered_df.iat[row, col] for row, col in predicted_answer_coordinates[0]]
 
 
-def tapex_base_answer(filtered_df, question) -> list:
+def tapex_base_answer(filtered_df, question, tokenizer, model) -> list:
     """TAPEX Base 구현 (공식 모델)"""
-    tokenizer = AutoTokenizer.from_pretrained("microsoft/tapex-base-finetuned-wtq")
-    model = AutoModelForSeq2SeqLM.from_pretrained("microsoft/tapex-base-finetuned-wtq")
     
     # 테이블을 TAPEX 형식으로 변환
-    table_text = filtered_df.to_csv(index=False, sep='\t')
+    table = pd.DataFrame(filtered_df)
     
-    # TAPEX 입력 형식
-    input_text = f"{question} {table_text}"
+    encoding = tokenizer(table, question, return_tensors="pt")
+    encoding = {k: v.to(device) for k, v in encoding.items()}
     
-    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=1024)
+    outputs = model.generate(
+        **encoding,
+        max_length=128,
+        num_beams=4,
+        early_stopping=True
+    )
     
-    with torch.no_grad():
-        outputs = model.generate(
-            inputs.input_ids,
-            max_length=128,
-            num_beams=4,
-            early_stopping=True
-        )
-    
-    answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return [answer] if answer else ["None"]
+    predicted_answer = tokenizer.batch_decode(outputs, skip_special_tokens=True)[0]
+    return [predicted_answer] if predicted_answer else ["None"]
 
 
-def tapex_large_answer(filtered_df, question) -> list:
-    """TAPEX Large 구현 (공식 모델)"""
-    tokenizer = AutoTokenizer.from_pretrained("microsoft/tapex-large-finetuned-wtq")
-    model = AutoModelForSeq2SeqLM.from_pretrained("microsoft/tapex-large-finetuned-wtq")
-    
-    # 테이블을 TAPEX 형식으로 변환
-    table_text = filtered_df.to_csv(index=False, sep='\t')
-    
-    input_text = f"{question} {table_text}"
-    
-    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=1024)
-    
-    with torch.no_grad():
-        outputs = model.generate(
-            inputs.input_ids,
-            max_length=128,
-            num_beams=5,
-            early_stopping=True
-        )
-    
-    answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return [answer] if answer else ["None"]
+def omnitab_answer(filtered_df, question, tokenizer, model) -> list:
+    # Ensure input is a DataFrame
+    if not isinstance(filtered_df, pd.DataFrame):
+        filtered_df = pd.DataFrame(filtered_df)
 
-
-def omnitab_answer(filtered_df, question) -> list:
-    """OmniTab 구현 (공식 모델)"""
-    # OmniTab WTQ 버전
-    tokenizer = AutoTokenizer.from_pretrained("neulab/omnitab-large-finetuned-wtq")
-    model = AutoModelForSeq2SeqLM.from_pretrained("neulab/omnitab-large-finetuned-wtq")
-    
     # OmniTab 입력 형식
     table_text = filtered_df.to_csv(index=False, sep='\t')
     input_text = f"Question: {question} Table: {table_text}"
     
     inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=1024)
+    inputs = {k: v.to(device) for k, v in inputs.items()}
     
     with torch.no_grad():
         outputs = model.generate(
-            inputs.input_ids,
+            inputs['input_ids'],
             max_length=128,
             num_beams=4,
             early_stopping=True
@@ -227,12 +218,7 @@ def omnitab_answer(filtered_df, question) -> list:
     return [answer] if answer else ["None"]
 
 
-def unifiedskg_answer(filtered_df, question) -> list:
-    """UnifiedSKG 구현 (공식 모델)"""
-    # UnifiedSKG T5-large 모델
-    tokenizer = AutoTokenizer.from_pretrained("hkunlp/unifiedskg-t5-large")
-    model = AutoModelForSeq2SeqLM.from_pretrained("hkunlp/unifiedskg-t5-large")
-    
+def unifiedskg_answer(filtered_df, question, tokenizer, model) -> list:
     # UnifiedSKG 형식으로 테이블 구조화
     table_linearized = ""
     headers = filtered_df.columns.tolist()
@@ -245,10 +231,11 @@ def unifiedskg_answer(filtered_df, question) -> list:
     input_text = f"Question: {question} Table: {table_linearized}"
     
     inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=1024)
+    inputs = {k: v.to(device) for k, v in inputs.items()}
     
     with torch.no_grad():
         outputs = model.generate(
-            inputs.input_ids,
+            **inputs,
             max_length=128,
             num_beams=4,
             early_stopping=True
@@ -260,6 +247,7 @@ def unifiedskg_answer(filtered_df, question) -> list:
 
 def run_all_models(index) -> dict:
     """모든 모델 실행 및 결과 비교 - make_response 한 번만 실행"""
+
     results = {}
     
     # make_response를 한 번만 실행
@@ -270,11 +258,9 @@ def run_all_models(index) -> dict:
     print(f"Filtered table shape: {filtered_df.shape}")
     
     models = {
-        'TAPAS': tapas_answer,
-        'TAPEX-Base': tapex_base_answer,
-        'TAPEX-Large': tapex_large_answer,
-        'OmniTab': omnitab_answer,
-        'UnifiedSKG': unifiedskg_answer,
+        'TAPAS': lambda df, q: tapas_answer(df, q, tapas_tokenizer, tapas_model),
+        'TAPEX-Base': lambda df, q: tapex_base_answer(df, q, tapex_tokenizer, tapex_model),
+        'OmniTab': lambda df, q: omnitab_answer(df, q, omnitab_tokenizer, omnitab_model),
         'LLM-based': LLM_based_answer
     }
     

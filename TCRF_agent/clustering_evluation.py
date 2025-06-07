@@ -155,7 +155,10 @@ def semantic_cluster_selection_fn(state):
         **state, 
         "selected_cluster": int(selected_cluster),
         "filtered_columns": selected_columns,
-        "cluster_selection_scores": final_scores.tolist()
+        "cluster_selection_scores": final_scores.tolist(),
+        "semantic_similarity_scores": similarities.tolist(),
+        "semantic_cluster_quality_scores": cluster_quality_scores.tolist(),
+        "semantic_final_scores": final_scores.tolist()
     }
 
 # Method 2: Multi-Criteria Decision Making (MCDM) Approach
@@ -206,7 +209,12 @@ def mcdm_cluster_selection_fn(state):
         **state,
         "selected_cluster": selected_cluster,
         "filtered_columns": selected_columns,
-        "cluster_scores": cluster_scores
+        "cluster_scores": cluster_scores,
+        "mcdm_relevance_scores": {cid: np.mean([np.mean(score_dict[col]) for col in clusters[cid]]) for cid in clusters},
+        "mcdm_diversity_scores": {cid: calculate_column_diversity(clusters[cid]) for cid in clusters},
+        "mcdm_info_density_scores": {cid: calculate_info_density(clusters[cid], score_dict) for cid in clusters},
+        "mcdm_size_match_scores": {cid: calculate_size_match(len(clusters[cid]), question_complexity) for cid in clusters},
+        "mcdm_cluster_scores": cluster_scores
     }
 
 # Method 3: Adaptive Threshold with Confidence Scoring
@@ -262,7 +270,9 @@ def adaptive_threshold_selection_fn(state):
         "selected_cluster": selected_cluster,
         "filtered_columns": selected_columns,
         "cluster_confidences": cluster_confidences,
-        "selection_threshold": threshold
+        "selection_threshold": threshold,
+        "adaptive_cluster_confidences": cluster_confidences,
+        "adaptive_selection_threshold": threshold
     }
 
 # Method 4: Ensemble Selection with Voting
@@ -321,10 +331,10 @@ def ensemble_cluster_selection_fn(state):
             top_k_cols = sorted_cols[:top_k_per_cluster]
             additional_columns.extend(top_k_cols)
     
-    print(f"[EnsembleSelection] Votes: {vote_counts}")
-    print(f"[EnsembleSelection] Selected cluster: {selected_cluster}")
-    print(f"[EnsembleSelection] Selected Cluster columns: {selected_columns}")
-    print(f"[EnsembleSelection] Other cluster selected columns: {additional_columns}")
+    #print(f"[EnsembleSelection] Votes: {vote_counts}")
+    #print(f"[EnsembleSelection] Selected cluster: {selected_cluster}")
+    #print(f"[EnsembleSelection] Selected Cluster columns: {selected_columns}")
+    #print(f"[EnsembleSelection] Other cluster selected columns: {additional_columns}")
 
     selected_columns += additional_columns
 
@@ -336,7 +346,7 @@ def ensemble_cluster_selection_fn(state):
 
     
 
-    print(f"[EnsembleSelection] Final selected columns: {selected_columns}")
+    #print(f"[EnsembleSelection] Final selected columns: {selected_columns}")
 
 
     return {
@@ -348,6 +358,11 @@ def ensemble_cluster_selection_fn(state):
             "semantic_choice": result1["selected_cluster"],
             "mcdm_choice": result2["selected_cluster"],
             "adaptive_choice": result3["selected_cluster"]
+        },
+        "ensemble_confidences": {
+            "semantic": max(result1.get("cluster_selection_scores", [0])),
+            "mcdm": max(result2.get("cluster_scores", {}).values()) if result2.get("cluster_scores") else 0,
+            "adaptive": max(result3.get("cluster_confidences", {}).values()) if result3.get("cluster_confidences") else 0
         }
     }
 

@@ -248,20 +248,27 @@ def unifiedskg_answer(filtered_df, question, tokenizer, model) -> list:
 def run_all_models(index) -> dict:
     """모든 모델 실행 및 결과 비교 - make_response 한 번만 실행"""
 
+    jsonl_path = "outputs/tcrf_results.jsonl"
+    target_index = index
+    found = False
+    with open(jsonl_path, "r", encoding="utf-8") as f:
+        for line in f:
+            entry = json.loads(line)
+            # index가 문자열이나 정수로 저장되어 있을 수 있으므로, 비교 시 모두 문자열로 변환
+            if float(entry.get("index")) == float(target_index):
+                answer = entry['answer']
+                question = entry['question']
+                filtered_df = pd.DataFrame(entry['filtered_df'])
     results = {}
-    
-    # make_response를 한 번만 실행
-    print(f"Loading data for index {index}...")
-    raw_table, filtered_df, question, answer = make_response(index)
     print(f"Question: {question}")
     print(f"Real Answer: {answer}")
     print(f"Filtered table shape: {filtered_df.shape}")
     
     models = {
         'TAPAS': lambda df, q: tapas_answer(df, q, tapas_tokenizer, tapas_model),
+        'LLM-based': LLM_based_answer,
         'TAPEX-Base': lambda df, q: tapex_base_answer(df, q, tapex_tokenizer, tapex_model),
-        'OmniTab': lambda df, q: omnitab_answer(df, q, omnitab_tokenizer, omnitab_model),
-        'LLM-based': LLM_based_answer
+        'OmniTab': lambda df, q: omnitab_answer(df, q, omnitab_tokenizer, omnitab_model)
     }
     
     for model_name, model_func in models.items():

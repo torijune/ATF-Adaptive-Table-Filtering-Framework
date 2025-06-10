@@ -3,3 +3,4 @@ myvenv/
 *.ipynb
 *.env
 outputs/
+Figures/

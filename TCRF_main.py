@@ -102,7 +102,7 @@ def load_existing_results(output_path):
         with open(output_path, "r", encoding="utf-8") as f:
             for line in f:
                 entry = json.loads(line)
-                idx = str(entry.get("index"))
+                idx = str(int(entry.get("index")))
                 results[idx] = entry
     return results
 
@@ -147,7 +147,8 @@ if __name__ == "__main__":
         try:
             result = make_response(int(index_str))
             formatted_result = {k: recursive_format(v) for k, v in result.items()}
-            save_result(int(index_str), formatted_result, output_path)
+            formatted_result["index"] = int(index_str)
+            save_result(str(index_str), formatted_result, output_path)
             print(f"✅ Saved index {index_str}")
         except Exception as e:
             print(f"❌ Failed at index {index_str}: {e}")

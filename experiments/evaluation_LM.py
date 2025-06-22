@@ -21,14 +21,8 @@ else:
     device = torch.device("cpu")
 
 # Load all model/tokenizer objects globally, only once
-tapas_tokenizer = TapasTokenizer.from_pretrained("google/tapas-base-finetuned-wtq")
-tapas_model = TapasForQuestionAnswering.from_pretrained("google/tapas-base-finetuned-wtq").to(device)
-
-tapex_tokenizer = AutoTokenizer.from_pretrained("microsoft/tapex-base-finetuned-wtq")
-tapex_model = AutoModelForSeq2SeqLM.from_pretrained("microsoft/tapex-base-finetuned-wtq").to(device)
-
-omnitab_tokenizer = AutoTokenizer.from_pretrained("neulab/omnitab-large-finetuned-wtq")
-omnitab_model = AutoModelForSeq2SeqLM.from_pretrained("neulab/omnitab-large-finetuned-wtq").to(device)
+tapas_tokenizer = TapasTokenizer.from_pretrained("google/tapas-mini-finetuned-wtq")
+tapas_model = TapasForQuestionAnswering.from_pretrained("google/tapas-mini-finetuned-wtq").to(device)
 
 import os
 import openai
@@ -265,10 +259,7 @@ def run_all_models(index) -> dict:
     print(f"Filtered table shape: {filtered_df.shape}")
     
     models = {
-        'TAPAS': lambda df, q: tapas_answer(df, q, tapas_tokenizer, tapas_model),
-        'LLM-based': LLM_based_answer,
-        'TAPEX-Base': lambda df, q: tapex_base_answer(df, q, tapex_tokenizer, tapex_model),
-        'OmniTab': lambda df, q: omnitab_answer(df, q, omnitab_tokenizer, omnitab_model)
+        'LLM-based': LLM_based_answer
     }
     
     for model_name, model_func in models.items():
@@ -378,28 +369,49 @@ def calculate_overall_accuracy(accuracy_results):
 
 
 if __name__ == "__main__":
-    # 단일 테스트
-    index = 232
-    results, true_answer = run_all_models(index)
-    
-    print(f"\n{'='*50}")
-    print("EM and F1 EVALUATION")
-    print(f"{'='*50}")
-    
-    for model_name, predicted in results.items():
-        if predicted != ["Error"]:
-            em, f1 = compute_em_f1(predicted, true_answer)
-            print(f"{model_name}: EM = {em}, F1 = {f1:.2f}")
-        else:
-            print(f"{model_name}: Error")
-    
-    # 배치 테스트 (예시)
-    # test_indices = [230, 231, 232, 233, 234]
-    # batch_results, batch_accuracy = batch_evaluation(test_indices)
-    # overall_accuracy = calculate_overall_accuracy(batch_accuracy)
-    # 
-    # print(f"\n{'='*50}")
-    # print("OVERALL EM and F1 RESULTS")
-    # print(f"{'='*50}")
-    # for model, scores in overall_accuracy.items():
-    #     print(f"{model}: EM = {scores['EM']:.2%}, F1 = {scores['F1']:.2%}")
+    import os
+
+    SAVE_PATH = "outputs/eval_scores.csv"
+
+    # 기존 결과 불러오기
+    if os.path.exists(SAVE_PATH):
+        df_results = pd.read_csv(SAVE_PATH)
+        done_indices = set(df_results["index"].unique())
+    else:
+        df_results = pd.DataFrame(columns=["index", "model", "EM", "F1"])
+        done_indices = set()
+
+    with open("outputs/tcrf_results.jsonl", "r") as f:
+        lines = f.readlines()
+        index_list = list(range(len(lines)))
+
+    pending_indices = [idx for idx in index_list if idx not in done_indices]
+
+    for idx in pending_indices:
+        print(f"\n{'='*50}")
+        print(f"Processing Index: {idx}")
+        print(f"{'='*50}")
+        try:
+            results, true_answer = run_all_models(idx)
+            for model_name, predicted in results.items():
+                if predicted != ["Error"]:
+                    em, f1 = compute_em_f1(predicted, true_answer)
+                else:
+                    em, f1 = 0, 0.0
+
+                df_results = pd.concat([
+                    df_results,
+                    pd.DataFrame([{
+                        "index": idx,
+                        "model": model_name,
+                        "EM": em,
+                        "F1": f1
+                    }])
+                ], ignore_index=True)
+
+            # ✅ 자동 저장
+            df_results.to_csv(SAVE_PATH, index=False)
+        except Exception as e:
+            print(f"[Error] Failed at index {idx}: {e}")
+
+    print(f"\n✅ 전체 완료! 결과는 {SAVE_PATH}에 저장됨")

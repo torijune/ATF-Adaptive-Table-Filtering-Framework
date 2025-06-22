@@ -282,6 +282,8 @@ def ensemble_cluster_selection_fn(state):
     - state["top_k_per_cluster"]를 통해 각 클러스터에서 선택할 상위 컬럼 수 조정 가능 (기본값 1)
     """
     # 각 방법으로 클러스터 선택
+    table_columns = state['table_columns']
+    
     result1 = semantic_cluster_selection_fn(state)
     result2 = mcdm_cluster_selection_fn(state)
     result3 = adaptive_threshold_selection_fn(state)
@@ -343,6 +345,9 @@ def ensemble_cluster_selection_fn(state):
     for col in essential_columns:
         if col not in selected_columns:
             selected_columns.append(col)
+
+    if "Row Header" in table_columns and "Row Header" not in selected_columns:
+        selected_columns += ["Row Header"]
 
     
 

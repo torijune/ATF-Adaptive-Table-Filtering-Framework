@@ -30,43 +30,32 @@ def column_description(table_columns, question, raw_table=None, predicted_entity
     column_blocks = []
     col_examples_map = {}
     for col in table_columns:
+        sample_text = ""
+        include_in_block = True
         if raw_table is not None:
             try:
                 col_values = raw_table[col].dropna().astype(str)
                 val_counts = col_values.value_counts()
-                
-                # More stable sampling strategy
-                
-                # 같은 값이 두번이상 등장하는 column -> 범주형으로 판단
-                ## 10개 이하이면 모든 것들을 다 넣고
+
                 if len(val_counts[val_counts > 1]) <= 10:
-                    frequent_vals = val_counts[val_counts > 1].index.tolist() 
+                    frequent_vals = val_counts[val_counts > 1].index.tolist()
                 else:
-                ## 11개 이상이면 5개만 넣는 방식
                     frequent_vals = val_counts[val_counts > 1].head(5).index.tolist()
-                sample_values = []
-                sample_values.extend(frequent_vals)
-                
-                # 각각 한번만 등장하는 것은 각 row에 unique한 값들이 등장하는 column -> 범주형이 아닌 것으로 판단
-                unique_vals = val_counts[val_counts == 1].head(5).index.tolist()
-                sample_values.extend(unique_vals)
-                
-                # head로 넣는 경우에 중복을 방지하기 위해
+                sample_values = frequent_vals + val_counts[val_counts == 1].head(5).index.tolist()
+
                 seen = set()
                 sample_values = [x for x in sample_values if not (x in seen or seen.add(x))]
-                
-                # 에러 예외처리를 위한 If문 -> 넣을만한게 없으면 그냥 해당 column의 dtype으로 대체
+
                 if sample_values:
                     sample_text = f" (Examples: {', '.join(sample_values[:5])})"
-                else:
-                    sample_text = f" (Data type: {raw_table[col].dtype})"
-                    
             except Exception as e:
-                sample_text = f" (Data type: {raw_table[col].dtype if col in raw_table.columns else 'unknown'})"
-        else:
-            sample_text = ""
+                include_in_block = False  # 예시 생성에 실패했으면 formatted_columns에는 포함하지 않음
+
         col_examples_map[col] = sample_text
-        column_blocks.append(f"{col}{sample_text}")
+        if include_in_block:
+            column_blocks.append(f"{col}{sample_text}")
+        else:
+            column_blocks.append(f"{col}")  # 예시 없이 컬럼 이름만 추가
 
     formatted_columns = "\n".join(column_blocks)
 

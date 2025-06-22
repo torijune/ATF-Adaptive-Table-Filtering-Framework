@@ -1,6 +1,13 @@
-data/
+Open-WikiTable_data/
+AIT-QA/
+experiments/
+WikiTableQuestion/
+Table-Fact-Checking/
+TabFact/
 myvenv/
 *.ipynb
 *.env
 outputs/
 Figures/
+TabFact_TCRF.py
+*.zip

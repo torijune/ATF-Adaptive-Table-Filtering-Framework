@@ -1,71 +1,63 @@
-# TCRF: Table Column-Row Filtering for Table-based Question Answering
+# 📘 ATF: Adaptive Table Filtering Framework for Table-based Question Answering
 
-## 📄 Paper Link (Preprint on arxiv):   
-[TCRF: Table Column-Row Filtering for Table-based Question Answering](https://arxiv.org/abs/2506.23463)
-
-TCRF (Table Column-Row Filtering) is a modular and extensible Table QA system designed to enhance table understanding and answer generation by intelligently filtering irrelevant columns and rows. This project combines LLM-based reasoning with traditional information retrieval techniques for robust and adaptive QA over structured data.
+**[📄 Paper (arXiv)](https://arxiv.org/abs/2506.23463)**  
+A modular and extensible pre-processing framework for improving TableQA performance and input efficiency.
 
 ---
 
-## 🧠 System Architecture
+## ✨ Overview
 
-The system is organized into five primary stages:
+**ATF (Adaptive Table Filtering)** is a plug-and-play framework that enhances table-based question answering by **removing irrelevant columns and rows** before passing the compact table into LLMs.
 
-1. **PredictAnswerEntity (LLM-based Entity Type Inference)**  
-   - Infers the likely entity type (e.g., Person, Organization, Date) of the expected answer based on the question.
-   - Enables downstream filtering, prompt selection, or context shaping to guide accurate answer generation.
+It fuses **LLM-based reasoning** and **retrieval-based techniques**, making it adaptable, efficient, and accurate — especially under long-table or limited-token constraints.
 
-2. **ColumnRelevance (LLM + Embedding Fusion)**  
-   - Analyzes the relevance of each column to the question using a combination of LLM scores and embedding-based similarity (e.g., cosine, cross-encoder).
-   - Also includes sample value analysis and structure-aware scoring to distinguish categorical and numerical fields.
+---
 
-3. **Column Clustering**  
-   - Groups semantically **similar columns** using **K-means** clustering methods.
-   - Preserves columns from the primary cluster and supplements with the most relevant column from other clusters.
+## 🧠 Architecture
 
-4. **RowRanker (Hybrid Retrieval)**  
-   - Computes row relevance using a hybrid of sparse (TF-IDF, BM25) and dense retrieval.
-   - Applies softmax normalization and proportionally selects rows based on table size for efficiency.
+The system is modularized into the following components:
 
-5. **FinalTableSelector**  
-   - Combines selected columns and rows into a compact context table.
-   - Feeds the result to an LLM or Tool Agent for final answer generation.
+1. **Answer Entity Prediction (LLM)**
+   - Predicts the entity type of the expected answer to guide the filtering process.
+
+2. **Column Relevance Scoring**
+   - Uses LLM-generated descriptions, cosine similarity, and ensemble scoring to select relevant columns.
+
+3. **Column Clustering**
+   - Clusters columns using K-means and retains the core cluster plus top-ranked others.
+
+4. **Row Ranking**
+   - Computes row relevance using TF-IDF, BM25, and Sentence-BERT embeddings.
+
+5. **Final Table Selector**
+   - Combines selected columns and rows to build a compact context for the LLM to use.
 
 ---
 
 ## ⚙️ Features
 
-- 🧮 **Neural Column Attention (planned):** Future integration of transformer-style attention for structure-aware column weighting.
-- 🧠 **Intent-aware Scoring:** Uses question intent (e.g., WHO/WHERE/WHEN) to prioritize relevant features.
-- 📦 **Few-shot & Adaptive Learning (roadmap):** Enables better generalization to new domains and question types.
-- 💬 **LangGraph Integration:** Modular execution of pipeline components via LangGraph agent-style orchestration.
-- 🛠️ **Failure Logging & Feedback:** Tracks performance and logs failure types for debugging and learning.
-- 🔁 **Caching System:** Fast response on similar questions using cosine similarity cache.
+- 🧠 **Intent-aware filtering** based on question types (Who/When/etc.)
+- 🔍 **Hybrid retrieval** (dense + sparse)
+- 🧮 **K-means clustering** for semantic column grouping
+- 📦 **Cosine similarity cache** for repeated queries
+- 💬 **LangGraph agent-style orchestration** (coming soon)
+- 🧪 **Failure logging & few-shot adaptation roadmap**
 
 ---
 
-## 🚀 Roadmap
 
-See our [Improvement Roadmap](#) for full implementation phases:
-- Phase 1: Dynamic thresholding, caching, condition parser
-- Phase 2: Complexity analyzer, ensemble strategies, intent mapping
-- Phase 3: Neural attention, hierarchical retrieval
-- Phase 4: Real-time adaptation, modular reasoning engine, cross-modal QA
-
----
-
-## FlowChart
+## 📊 System Flowchart
 
 ```mermaid
 graph TD
     A[data_loader]
-    B[predict_answer_entity_node]
+    B[answer_entity_predictor]
     C[column_relevance_checker]
     D[column_cluster_agent]
     E[essential_column_node]
     F[select_column_agent]
     G[row_ranker]
-    H[final_table_selecter]
+    H[final_table_selector]
     I[responder]
     J[END]
 
@@ -80,95 +72,101 @@ graph TD
     I --> J
 ```
 
-### 📊 Detailed Flow:  
+---
+
+## 📊 Detailed Modules
+
+<details>
+<summary><strong>Entity Type Prediction</strong></summary>
 
 ```mermaid
-%%{init: {'theme':'default', 'flowchart': {'nodeSpacing': 20, 'rankSpacing': 20}}}%%
 graph TD
-    subgraph predict_answer_entity_node
-        P1[Input: Question]
-        P2[LLM CoT Reasoning]
-        P3[Score Each Entity Type]
-        P4[Select Most Probable Type]
-        P5[Output: predicted_answer_entity]
-        
-        P1 --> P2
-        P2 --> P3
-        P3 --> P4
-        P4 --> P5
-    end
-
-    subgraph column_relevance_checker
-        A1[Input: Question + Raw Table]
-        A2[LLM-based Column Description Generation]
-        A3[LLM-based Column Scoring]
-        A4[Cosine Similarity with Question]
-        A5[Fusion: LLM Score + Cosine Similarity]
-        A6[Clustering Columns]
-        A7[Output: column_relevance_scores + cluster assignments]
-        
-        A1 --> A2
-        A2 --> A3
-        A1 --> A4
-        A3 --> A5
-        A4 --> A5
-        A5 --> A6
-        A6 --> A7
-    end
+    P1[Input: Question] --> P2[LLM CoT Reasoning]
+    P2 --> P3[Score Each Entity Type]
+    P3 --> P4[Select Most Probable Type]
+    P4 --> P5[Output: predicted_answer_entity]
 ```
 
-### 📊 Detailed Flow: cluster_selection (Ensemble Strategy)
+</details>
+
+<details>
+<summary><strong>Column Relevance & Clustering</strong></summary>
 
 ```mermaid
-%%{init: {'theme':'default', 'flowchart': {'nodeSpacing': 20, 'rankSpacing': 20}}}%%
 graph TD
-    subgraph cluster_selection
-        B1[Input: column_clusters, score_dict, cluster_centers, question]
-        B2[Semantic Similarity Method]
-        B3[MCDM Scoring Method]
-        B4[Adaptive Threshold Method]
-        B5[Voting Mechanism]
-        B6[Select top-k columns from other clusters]
-        B7[Include essential_columns]
-        B8[Output: selected_cluster, filtered_columns]
-        
-        B1 --> B2
-        B1 --> B3
-        B1 --> B4
-        B2 --> B5
-        B3 --> B5
-        B4 --> B5
-        B5 --> B6
-        B6 --> B7
-        B7 --> B8
-    end
+    A1[Input: Question + Raw Table]
+    A1 --> A2[LLM Column Descriptions]
+    A2 --> A3[LLM Scoring]
+    A1 --> A4[Cosine Similarity]
+    A3 --> A5[Fusion Score]
+    A4 --> A5
+    A5 --> A6[Clustering (K-means)]
+    A6 --> A7[Output: Selected Columns]
 ```
 
-### 📊 Detailed Flow: row_ranker
+</details>
+
+<details>
+<summary><strong>Cluster Selection (Ensemble)</strong></summary>
 
 ```mermaid
-%%{init: {'theme':'default', 'flowchart': {'nodeSpacing': 20, 'rankSpacing': 20}}}%%
 graph TD
-    subgraph row_ranker
-        R1[Input: filtered_columns, raw_table, question]
-        R2[Join column values per row into text]
-        R3[TF-IDF Vectorization]
-        R4[BM25 Scoring]
-        R5[Dense Embedding Similarity - Sentence-BERT]
-        R6[Softmax Normalization]
-        R7[Weighted Fusion: TF-IDF + BM25 + Dense]
-        R8[Top-k Selection - top 40%]
-        R9[Output: selected_rows, top_row_indices]
-
-        R1 --> R2
-        R2 --> R3
-        R2 --> R4
-        R2 --> R5
-        R3 --> R6
-        R4 --> R6
-        R5 --> R6
-        R6 --> R7
-        R7 --> R8
-        R8 --> R9
-    end
+    B1[Input: clusters, scores, question]
+    B1 --> B2[Semantic Similarity]
+    B1 --> B3[MCDM Scoring]
+    B1 --> B4[Adaptive Threshold]
+    B2 --> B5[Voting]
+    B3 --> B5
+    B4 --> B5
+    B5 --> B6[Select top-k]
+    B6 --> B7[Output: Filtered Columns]
 ```
+
+</details>
+
+<details>
+<summary><strong>Row Ranking</strong></summary>
+
+```mermaid
+graph TD
+    R1[Input: selected_columns + question]
+    R1 --> R2[Join rows to text]
+    R2 --> R3[TF-IDF]
+    R2 --> R4[BM25]
+    R2 --> R5[Sentence-BERT]
+    R3 --> R6[Softmax]
+    R4 --> R6
+    R5 --> R6
+    R6 --> R7[Weighted Fusion]
+    R7 --> R8[Top-k Rows]
+    R8 --> R9[Output: Final Table Rows]
+```
+
+</details>
+
+---
+
+## 🧪 Citation
+
+If you use this framework or paper, please cite:
+
+```bibtex
+@misc{june2025dropadaptivetablefiltering,
+      title={What to Keep and What to Drop: Adaptive Table Filtering Framework}, 
+      author={Jang Won June},
+      year={2025},
+      eprint={2506.23463},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2506.23463}, 
+}
+```
+
+---
+
+## 🙋‍♀️ Contact
+
+For questions, contributions, or collaborations, feel free to reach out at:  
+📧 **dnjswnswkd03@mju.ac.kr**
+
+---

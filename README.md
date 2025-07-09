@@ -1,5 +1,8 @@
 # TCRF: Table Column-Row Filtering for Table-based Question Answering
 
+## 📄 Paper Link (Preprint on arxiv):   
+[TCRF: Table Column-Row Filtering for Table-based Question Answering](https://arxiv.org/abs/2506.23463)
+
 TCRF (Table Column-Row Filtering) is a modular and extensible Table QA system designed to enhance table understanding and answer generation by intelligently filtering irrelevant columns and rows. This project combines LLM-based reasoning with traditional information retrieval techniques for robust and adaptive QA over structured data.
 
 ---

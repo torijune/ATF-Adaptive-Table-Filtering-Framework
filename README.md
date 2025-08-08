@@ -151,9 +151,9 @@ graph TD
 If you use this framework or paper, please cite:
 
 ```bibtex
-@misc{june2025dropadaptivetablefiltering,
+@misc{jang2025dropadaptivetablefiltering,
       title={What to Keep and What to Drop: Adaptive Table Filtering Framework}, 
-      author={Jang Won June},
+      author={WonJune Jang},
       year={2025},
       eprint={2506.23463},
       archivePrefix={arXiv},
